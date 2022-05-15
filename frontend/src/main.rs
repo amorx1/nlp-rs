@@ -31,14 +31,6 @@ fn app(cx: Scope) -> Element {
         nav {
             div {
                 class: "container mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center justify-end",
-                // a {
-                //     class: "flex title-font font-medium items-center text-gray-900 mb-4 md:mb-0",
-                //     href: "#",
-                //     span {
-                //         class: "ml-3 text-3xl",
-                //         "rusty_translate"
-                //     }
-                // }
                 a {
                     class: "inline-flex items-center py-1 px-3 text-base mt-4 md:mt-0",
                     href: "https://github.com/amorx1",
@@ -86,8 +78,6 @@ fn app(cx: Scope) -> Element {
                                     Ok(o) => output.set(o.text().await.unwrap()),
                                     Err(e) => output.set(e.to_string())
                                 }
-                                // output.set();
-                                // println!("{}", handle_prediction(req.value.clone(), &client).await);
                             }
                         })
                     }
