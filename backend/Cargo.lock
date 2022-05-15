@@ -3246,6 +3246,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "tch",
  "tokio 1.18.2",
 ]
 

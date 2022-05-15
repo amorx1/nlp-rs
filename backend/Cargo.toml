@@ -27,4 +27,4 @@ lingua = "1.4.0"
 actix-cors = "0.6.1"
 rust-bert = "0.17.0"
 tokio = "1.18.2"
-    
+tch = "0.6.1"
