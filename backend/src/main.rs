@@ -1,15 +1,11 @@
 use actix_cors::Cors;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use lingua::Language::{English, French, German, Spanish};
 use lingua::{Language, LanguageDetector, LanguageDetectorBuilder};
-use log::info;
 use rust_bert::pipelines::common::ModelType;
-use rust_bert::pipelines::translation::{
-    TranslationConfig, TranslationModel, TranslationModelBuilder,
-};
+use rust_bert::pipelines::translation::{ TranslationModel, TranslationModelBuilder };
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tch::Device;
 use tokio::task::spawn_blocking;
 
 #[derive(Debug, Serialize, Deserialize)]

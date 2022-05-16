@@ -146,7 +146,7 @@ pub fn NLP_service(cx: Scope) -> Element {
             ))
         }
         Services::Splash => cx.render(rsx!(
-            h1 { "BENCHOD" }
+            h1 { "HELLO" }
         ))
     }
 }
