@@ -13,7 +13,7 @@ fn Nav(cx: Scope) -> Element {
                 div {
                     class: "relative flex items-center justify-between",
                     a {
-                        class: "inline-flex items-center text-indigo-300 font-bold text-6xl",
+                        class: "inline-flex items-center text-blue-700 font-bold text-6xl",
                         "NLP Ops"
                     }
                     ul {
