@@ -1,4 +1,6 @@
 /backend/target
 /backend/dist
+/backend/.vscode
 /frontend/target
 /frontend/dist
+/frontend/.vscode
