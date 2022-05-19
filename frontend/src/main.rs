@@ -5,7 +5,7 @@ enum Services{
     Translate
 }
 
-static SERVICE: Atom<Services> = |_| Services::Translate;
+static SERVICE: Atom<Services> = |_| Services::Splash;
 
 fn main() {
     dioxus::web::launch(app);
@@ -19,6 +19,16 @@ pub fn Head(cs: Scope) -> Element {
     ))
 }
 
+async fn send_service(service: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
+    let mut map = std::collections::HashMap::new();
+    map.insert("service", service);
+    client.post("http://127.0.0.1:8081/service")
+            .header("Content-Type", "application/json")
+            .json(&map)
+            .send()
+            .await
+}
+
 pub fn Nav(cx: Scope) -> Element {
     let set_service = use_set(&cx, SERVICE);
     cx.render(rsx! (
@@ -30,7 +40,18 @@ pub fn Nav(cx: Scope) -> Element {
                     div {
                         class: "relative flex items-center justify-between",
                         button {
-                            onclick: move |_| set_service(Services::Splash),
+                            onclick: move |_| {
+                                set_service(Services::Splash);
+                                cx.spawn({
+                                    async move {
+                                        let client = reqwest::Client::new();
+                                        let res = send_service("None".to_string(), &client).await;
+                                        match res {
+                                            _ => {}
+                                        }
+                                    }
+                                });
+                            },
                             class: "inline-flex items-center bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 font-bold text-8xl",
                             "NLP Ops"
                         }
@@ -38,7 +59,18 @@ pub fn Nav(cx: Scope) -> Element {
                             class: "flex items-center hidden space-x-8 lg:flex",
                             li {
                                 button {
-                                    onclick: move |_| set_service(Services::Translate),
+                                    onclick: move |_| { 
+                                        set_service(Services::Translate);
+                                        cx.spawn({
+                                            async move {
+                                                let client = reqwest::Client::new();
+                                                let res = send_service("Translation".to_string(), &client).await;
+                                                match res {
+                                                    _ => {}
+                                                }
+                                            }
+                                        });
+                                    },
                                     class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
                                     "Translation"
                                 }
@@ -81,7 +113,7 @@ pub fn Translation(cx: Scope) -> Element {
                     div {
                         h1 {
                             class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
-                            "Translate",
+                            "Translate  📖",
                         }
                     }
                     div {
@@ -180,14 +212,15 @@ pub fn NLP_service(cx: Scope) -> Element {
         body {
             class: "bg-black h-screen pt-18",
             match curr_service {
+                Services::Splash => cx.render(rsx!(
+                    Splash {}
+                )),
                 Services::Translate => {
                     cx.render(rsx!(
                         Translation {}
                     ))
                 }
-                Services::Splash => cx.render(rsx!(
-                    Splash {}
-                ))
+
             }
         }
     ))
