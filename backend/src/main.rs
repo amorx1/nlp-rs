@@ -150,9 +150,15 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
     match service.as_str() {
         "Translation" => {
             data.SModel = None;
-            data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
+            match &data.TModel {
+                Some(_) => {},
+                None => {
+                    data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
+                }
+            }
+            // data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
             // drop(data);
-            HttpResponse::Ok().body("Translation Model Created".to_string())
+            HttpResponse::Ok().body("Translation Model Created/Already Exists".to_string())
         },
         "Summarization" => {
             data.TModel = None;
