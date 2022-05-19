@@ -3,10 +3,13 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use lingua::Language::{English, French, German, Spanish};
 use lingua::{Language, LanguageDetector, LanguageDetectorBuilder};
 use rust_bert::pipelines::common::ModelType;
-use rust_bert::pipelines::translation::{ TranslationModel, TranslationModelBuilder };
+use rust_bert::pipelines::translation::{ TranslationConfig, TranslationModel, TranslationModelBuilder };
+use rust_bert::resources::{ Resource, RemoteResource };
+use rust_bert::t5::{T5ConfigResources, T5ModelResources, T5VocabResources};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tokio::task::spawn_blocking;
+use tch::Device;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Query {
@@ -62,12 +65,11 @@ async fn pred_from_query(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -
     let source_language = convert_lang(inferred_language).await;
 
     let model = &data.Model;
-    let output = model
-        .translate(
-            &[query],
-            source_language,
-            rust_bert::pipelines::translation::Language::Spanish,
-        )
+    let output = model.translate(
+                                &[query],
+                                source_language,
+                                rust_bert::pipelines::translation::Language::French,
+                            )
         .unwrap();
     let res = &output[0];
 
@@ -75,21 +77,52 @@ async fn pred_from_query(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -
 }
 
 pub fn get_model() -> TranslationModel {
-    TranslationModelBuilder::new()
-        .with_model_type(ModelType::M2M100)
-        .with_source_languages(vec![
-            rust_bert::pipelines::translation::Language::English,
-            rust_bert::pipelines::translation::Language::Spanish,
-            rust_bert::pipelines::translation::Language::French,
-            rust_bert::pipelines::translation::Language::German,
-        ])
-        .with_target_languages(vec![
-            rust_bert::pipelines::translation::Language::Spanish,
-            rust_bert::pipelines::translation::Language::French,
-            rust_bert::pipelines::translation::Language::German,
-        ])
-        .create_model()
-        .unwrap()
+    let model_resource = Resource::Remote(RemoteResource::from_pretrained(T5ModelResources::T5_BASE));
+    let config_resource = Resource::Remote(RemoteResource::from_pretrained(T5ConfigResources::T5_BASE));
+    let vocab_resource = Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
+    let merges_resource = Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
+
+    let source_languages = [
+        rust_bert::pipelines::translation::Language::English,
+        rust_bert::pipelines::translation::Language::French,
+        rust_bert::pipelines::translation::Language::German,
+        rust_bert::pipelines::translation::Language::Spanish,
+    ];
+    let target_languages = [
+        rust_bert::pipelines::translation::Language::English,
+        rust_bert::pipelines::translation::Language::French,
+        rust_bert::pipelines::translation::Language::German,
+        rust_bert::pipelines::translation::Language::Spanish,
+    ];
+
+    let translation_config = TranslationConfig::new(
+        ModelType::T5,
+        model_resource,
+        config_resource,
+        vocab_resource,
+        merges_resource,
+        source_languages,
+        target_languages,
+        Device::cuda_if_available(),
+    );
+    TranslationModel::new(translation_config).unwrap()
+
+    // TranslationModelBuilder::new()
+    //     .with_model_type(ModelType::M2M100)
+    //     .with_source_languages(vec![
+    //         rust_bert::pipelines::translation::Language::English,
+    //         rust_bert::pipelines::translation::Language::Spanish,
+    //         rust_bert::pipelines::translation::Language::French,
+    //         rust_bert::pipelines::translation::Language::German,
+    //     ])
+    //     .with_target_languages(vec![
+    //         rust_bert::pipelines::translation::Language::Spanish,
+    //         rust_bert::pipelines::translation::Language::French,
+    //         rust_bert::pipelines::translation::Language::German,
+    //     ])
+    //     .create_model()
+    //     .unwrap()
+
     // TranslationModelBuilder::new()
     // .with_medium_model()
     // .with_source_languages(vec![rust_bert::pipelines::translation::Language::English, rust_bert::pipelines::translation::Language::Spanish, rust_bert::pipelines::translation::Language::French, rust_bert::pipelines::translation::Language::German])

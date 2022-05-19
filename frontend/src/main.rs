@@ -26,11 +26,12 @@ pub fn Nav(cx: Scope) -> Element {
             div {
                 class: "bg-black",
                 div {
-                    class: "px-4 py-8 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8",
+                    class: "px-4 py-16 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8",
                     div {
                         class: "relative flex items-center justify-between",
-                        a {
-                            class: "inline-flex items-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 font-bold text-8xl",
+                        button {
+                            onclick: move |_| set_service(Services::Splash),
+                            class: "inline-flex items-center bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 font-bold text-8xl",
                             "NLP Ops"
                         }
                         ul {
@@ -71,41 +72,26 @@ pub fn Nav(cx: Scope) -> Element {
 
 pub fn Translation(cx: Scope) -> Element {
     let output = use_state(&cx, || "".to_string());
-
+    let target = use_state(&cx, || "English".to_string());
     cx.render(rsx!(
-        body {
-            class: "bg-black h-screen pt-48",
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-96 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
-                // img {
-                //     class: "object-cover w-full h-64",
-                //     src: "https://images.unsplash.com/photo-1550439062-609e1531270e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60",
-                //     alt: "Article",
-                // }
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
                 div {
                     class: "p-6",
                     div {
-                        // span {
-                        //     class: "text-xs font-medium text-blue-600 uppercase dark:text-blue-400",
-                        //     "Lorem"
-                        // }
                         h1 {
                             class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
                             "Translate",
                         }
-                        // p {
-                        //     class: "mt-2 text-sm text-white dark:text-gray-400",
-                        //     "Form"
-                        // }
                     }
                     div {
-                        class: "mt-4",
+                        class: "mt-6",
                         div {
                             class: "flex items-center w-full",
                             div {
                                 class: "flex items-center w-full",
-                                input {
-                                    class: "bg-black border-2 border-purple-400 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
+                                textarea {
+                                    class: "bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
                                     placeholder: " Enter Query",
                                     oninput: move |req| {
                                         cx.spawn({
@@ -122,33 +108,89 @@ pub fn Translation(cx: Scope) -> Element {
                                     }
                                 },
                                 div {
-                                    class: "w-1/2 h-64 border-2 border-purple-400 rounded-md mx-2",
+                                    class: "w-1/2 h-64 border-2 bg-black border-yellow-500 rounded-md mx-2",
                                     h1 {
                                         class: "text-2xl text-white",
                                         "{output}"
                                     }
                                 }
                             }
+                        }
+                    }
+                    div {
+                        class:"mt-6",
+                        div {
+                            class: "flex items-center w-full",
+                            div {
+                                class: "flex items-center w-full",
+                                label { 
+                                    class: "text-white font-bold text-xl mx-2",
+                                    "Select target language: " }
+                                select {
+                                    // class: "mx-2 rounded-lg w-full h-8 py-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white text-xl font-bold",
+                                    class: "mx-2 rounded-lg w-full h-12 py-2 bg-black border-2 border-yellow-500 text-white text-xl font-bold",
+                                    onchange: move |t| target.set(t.value.to_string()),
+                                    name: "Target",
+                                    id: "target-selection",
+                                    option {
+                                        value: "English",
+                                        "English"
+                                    },
+                                    option {
+                                        value: "French",
+                                        "French"
+                                    },
+                                    option {
+                                        value: "Spanish",
+                                        "Spanish"
+                                    },
+                                    option {
+                                        value: "German",
+                                        "German"
+                                    }
+                                },
+                            }
+                        }
                     }
                 }
             }
+    ))
+}
+
+pub fn Splash(cx: Scope) -> Element {
+    cx.render(rsx!(
+            div {
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                div {
+                    class: "p-6",
+                    div {
+                        h1 {
+                            class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            "",
+                        }
+                    }
+                }
             }
-        }
     ))
 }
 
 pub fn NLP_service(cx: Scope) -> Element {
     let curr_service = use_read(&cx, SERVICE);
-    match curr_service {
-        Services::Translate => {
-            cx.render(rsx!(
-                Translation {}
-            ))
+    cx.render(rsx!(
+        body {
+            class: "bg-black h-screen pt-18",
+            match curr_service {
+                Services::Translate => {
+                    cx.render(rsx!(
+                        Translation {}
+                    ))
+                }
+                Services::Splash => cx.render(rsx!(
+                    Splash {}
+                ))
+            }
         }
-        Services::Splash => cx.render(rsx!(
-            h1 { "HELLO" }
-        ))
-    }
+    ))
 }
 
 async fn handle_prediction(query: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
