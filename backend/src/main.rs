@@ -3,14 +3,16 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use lingua::Language::{English, French, German, Spanish};
 use lingua::{Language, LanguageDetector, LanguageDetectorBuilder};
 use rust_bert::pipelines::common::ModelType;
-use rust_bert::pipelines::translation::{ TranslationConfig, TranslationModel, TranslationModelBuilder };
-use rust_bert::pipelines::summarization:: SummarizationModel;
-use rust_bert::resources::{ Resource, RemoteResource };
+use rust_bert::pipelines::summarization::SummarizationModel;
+use rust_bert::pipelines::translation::{
+    TranslationConfig, TranslationModel, TranslationModelBuilder,
+};
+use rust_bert::resources::{RemoteResource, Resource};
 use rust_bert::t5::{T5ConfigResources, T5ModelResources, T5VocabResources};
 use serde::{Deserialize, Serialize};
-use std::sync:: { Arc, Mutex };
-use tokio::task::spawn_blocking;
+use std::sync::{Arc, Mutex};
 use tch::Device;
+use tokio::task::spawn_blocking;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Query {
@@ -24,12 +26,10 @@ pub struct ServiceType {
 
 pub struct AppData {
     TModel: Option<TranslationModel>,
-    SModel: Option<SummarizationModel>
+    SModel: Option<SummarizationModel>,
 }
 
-
-pub async fn index(data: web::Data<Mutex<AppData>>) -> impl Responder {
-    let data = data.lock().unwrap();
+pub async fn index() -> impl Responder {
     web::Bytes::from_static(b"Hello World")
 }
 
@@ -57,7 +57,7 @@ async fn convert_lang(lang: String) -> rust_bert::pipelines::translation::Langua
     }
 }
 
-async fn pred_from_query(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+async fn translate(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
     let data = data.lock().unwrap();
     let query = format!("{}", q.query);
 
@@ -65,36 +65,57 @@ async fn pred_from_query(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -
         return HttpResponse::Ok().body("Enter phrase");
     }
 
-    if query.len() < 5 {
+    if query.len() < 3 {
         return HttpResponse::Ok().body("Enter phrase");
     }
 
     let inferred_language = infer_input(&query).await;
     let source_language = convert_lang(inferred_language).await;
-    
-    // let model = data.TModel;
+
     match &data.TModel {
         Some(translation_model) => {
-                        let output = translation_model.translate(
-                            &[query],
-                            source_language,
-                            rust_bert::pipelines::translation::Language::French,
-                        )
-                        .unwrap();
-                        let res = &output[0];
+            let output = translation_model
+                .translate(
+                    &[query],
+                    source_language,
+                    rust_bert::pipelines::translation::Language::French,
+                )
+                .unwrap();
+            let res = &output[0];
 
-                        HttpResponse::Ok().body(res.to_string())
+            HttpResponse::Ok().body(res.to_string())
         }
-        None => HttpResponse::Ok().body("ERROR".to_string())
+        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string()),
     }
-    
+}
+
+async fn summarize(q:web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+    let data = data.lock().unwrap();
+    let query = format!("{}", q.query);
+
+    if query == "".to_string() {
+        return HttpResponse::Ok().body("Enter text");
+    }
+
+    match &data.SModel {    
+        Some(summarization_model) => {
+            let output = summarization_model.summarize(&[query]);
+            let res = &output[0];
+            HttpResponse::Ok().body(res.to_string())
+        },
+        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string())
+    }
 }
 
 pub fn get_translation_model() -> TranslationModel {
-    let model_resource = Resource::Remote(RemoteResource::from_pretrained(T5ModelResources::T5_BASE));
-    let config_resource = Resource::Remote(RemoteResource::from_pretrained(T5ConfigResources::T5_BASE));
-    let vocab_resource = Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
-    let merges_resource = Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
+    let model_resource =
+        Resource::Remote(RemoteResource::from_pretrained(T5ModelResources::T5_BASE));
+    let config_resource =
+        Resource::Remote(RemoteResource::from_pretrained(T5ConfigResources::T5_BASE));
+    let vocab_resource =
+        Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
+    let merges_resource =
+        Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
 
     let source_languages = [
         rust_bert::pipelines::translation::Language::English,
@@ -144,44 +165,60 @@ pub fn get_translation_model() -> TranslationModel {
     // .create_model().unwrap()
 }
 
+pub fn get_summarization_model() -> SummarizationModel {
+    SummarizationModel::new(Default::default()).unwrap()
+}
+
 async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
     let mut data = data.lock().unwrap();
     let service = format!("{}", t.service);
     match service.as_str() {
         "Translation" => {
-            data.SModel = None;
+            // data.SModel = None;
             match &data.TModel {
-                Some(_) => {},
+                Some(_) => {}
                 None => {
-                    data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
+                    data.TModel = Some(
+                        spawn_blocking(move || get_translation_model())
+                            .await
+                            .unwrap()
+                    );
                 }
             }
-            // data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
-            // drop(data);
             HttpResponse::Ok().body("Translation Model Created/Already Exists".to_string())
         },
+
         "Summarization" => {
-            data.TModel = None;
+            // data.TModel = None;
+            match &data.SModel {
+                Some(_) => {},
+                None => {
+                    data.SModel =Some(
+                        spawn_blocking(move || get_summarization_model())
+                        .await
+                        .unwrap()
+                    );
+                }
+            }
             HttpResponse::Ok().body("OK".to_string())
         },
+
         "None" => {
-            data.TModel = None;
+            // data.TModel = None;
             HttpResponse::Ok().body("OK".to_string())
-        }
-        _ => HttpResponse::Ok().body("NO MODEL CREATED".to_string())
+        },
+
+        _ => HttpResponse::Ok().body("NO MODEL CREATED".to_string()),
     }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    // let model = spawn_blocking(move || get_translation_model()).await;
-    // let data = web::Data::new(Mutex::new(AppData {
-    //     Model: model.unwrap(),
-    // }));
+    
     let data = web::Data::new(Mutex::new(AppData {
         TModel: None,
-        SModel: None
+        SModel: None,
     }));
 
     HttpServer::new(move || {
@@ -190,8 +227,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(data.clone())
             .service(web::resource("/").route(web::get().to(index)))
             .service(web::resource("/service").route(web::post().to(model_service)))
-            .service(web::resource("/predict").route(web::post().to(pred_from_query)))
-            // .service(web::resource("/summarize").route(web::post().to(summarize_from_query)))
+            .service(web::resource("/predict").route(web::post().to(translate)))
+            .service(web::resource("/summarize").route(web::post().to(summarize)))
     })
     .bind("127.0.0.1:8081")?
     .run()
