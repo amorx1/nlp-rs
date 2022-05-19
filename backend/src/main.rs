@@ -4,10 +4,11 @@ use lingua::Language::{English, French, German, Spanish};
 use lingua::{Language, LanguageDetector, LanguageDetectorBuilder};
 use rust_bert::pipelines::common::ModelType;
 use rust_bert::pipelines::translation::{ TranslationConfig, TranslationModel, TranslationModelBuilder };
+use rust_bert::pipelines::summarization:: SummarizationModel;
 use rust_bert::resources::{ Resource, RemoteResource };
 use rust_bert::t5::{T5ConfigResources, T5ModelResources, T5VocabResources};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync:: { Arc, Mutex };
 use tokio::task::spawn_blocking;
 use tch::Device;
 
@@ -16,9 +17,16 @@ pub struct Query {
     pub query: String,
 }
 
-pub struct AppData {
-    Model: TranslationModel,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServiceType {
+    pub service: String,
 }
+
+pub struct AppData {
+    TModel: Option<TranslationModel>,
+    SModel: Option<SummarizationModel>
+}
+
 
 pub async fn index(data: web::Data<Mutex<AppData>>) -> impl Responder {
     let data = data.lock().unwrap();
@@ -63,20 +71,26 @@ async fn pred_from_query(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -
 
     let inferred_language = infer_input(&query).await;
     let source_language = convert_lang(inferred_language).await;
+    
+    // let model = data.TModel;
+    match &data.TModel {
+        Some(translation_model) => {
+                        let output = translation_model.translate(
+                            &[query],
+                            source_language,
+                            rust_bert::pipelines::translation::Language::French,
+                        )
+                        .unwrap();
+                        let res = &output[0];
 
-    let model = &data.Model;
-    let output = model.translate(
-                                &[query],
-                                source_language,
-                                rust_bert::pipelines::translation::Language::French,
-                            )
-        .unwrap();
-    let res = &output[0];
-
-    HttpResponse::Ok().body(res.to_string())
+                        HttpResponse::Ok().body(res.to_string())
+        }
+        None => HttpResponse::Ok().body("ERROR".to_string())
+    }
+    
 }
 
-pub fn get_model() -> TranslationModel {
+pub fn get_translation_model() -> TranslationModel {
     let model_resource = Resource::Remote(RemoteResource::from_pretrained(T5ModelResources::T5_BASE));
     let config_resource = Resource::Remote(RemoteResource::from_pretrained(T5ConfigResources::T5_BASE));
     let vocab_resource = Resource::Remote(RemoteResource::from_pretrained(T5VocabResources::T5_BASE));
@@ -130,12 +144,38 @@ pub fn get_model() -> TranslationModel {
     // .create_model().unwrap()
 }
 
+async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+    let mut data = data.lock().unwrap();
+    let service = format!("{}", t.service);
+    match service.as_str() {
+        "Translation" => {
+            data.SModel = None;
+            data.TModel = Some(spawn_blocking(move || get_translation_model()).await.unwrap());
+            // drop(data);
+            HttpResponse::Ok().body("Translation Model Created".to_string())
+        },
+        "Summarization" => {
+            data.TModel = None;
+            HttpResponse::Ok().body("OK".to_string())
+        },
+        "None" => {
+            data.TModel = None;
+            HttpResponse::Ok().body("OK".to_string())
+        }
+        _ => HttpResponse::Ok().body("NO MODEL CREATED".to_string())
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    let model = spawn_blocking(move || get_model()).await;
+    // let model = spawn_blocking(move || get_translation_model()).await;
+    // let data = web::Data::new(Mutex::new(AppData {
+    //     Model: model.unwrap(),
+    // }));
     let data = web::Data::new(Mutex::new(AppData {
-        Model: model.unwrap(),
+        TModel: None,
+        SModel: None
     }));
 
     HttpServer::new(move || {
@@ -143,7 +183,9 @@ async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive())
             .app_data(data.clone())
             .service(web::resource("/").route(web::get().to(index)))
+            .service(web::resource("/service").route(web::post().to(model_service)))
             .service(web::resource("/predict").route(web::post().to(pred_from_query)))
+            // .service(web::resource("/summarize").route(web::post().to(summarize_from_query)))
     })
     .bind("127.0.0.1:8081")?
     .run()
