@@ -15,4 +15,5 @@ dioxus serve
 cd ./dioxus-actix-mlops/frontend
 cargo run
 ```
+## Example
 ![example](https://github.com/amorx1/dioxus-actix-mlops/blob/master/public/example.png?raw=true "Example")
