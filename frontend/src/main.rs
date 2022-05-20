@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 enum Services{
     Splash,
-    Translate
+    Translate,
+    Summarize
 }
 
 static SERVICE: Atom<Services> = |_| Services::Splash;
@@ -77,7 +78,18 @@ pub fn Nav(cx: Scope) -> Element {
                             },
                             li {
                                 button {
-                                    onclick: move |_| set_service(Services::Splash),
+                                    onclick: move |_| {
+                                        set_service(Services::Summarize);
+                                        cx.spawn({
+                                            async move {
+                                                let client = reqwest::Client::new();
+                                                let res = send_service("Summarization".to_string(), &client).await;
+                                                match res {
+                                                    _ => {}
+                                                }
+                                            }
+                                        })
+                                    },
                                     class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
                                     "Summarization"
                                 }
@@ -189,6 +201,57 @@ pub fn Translation(cx: Scope) -> Element {
     ))
 }
 
+pub fn Summarization(cx: Scope) -> Element {
+    let output = use_state(&cx, || "".to_string());
+    cx.render(rsx!(
+            div {
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                div {
+                    class: "p-6",
+                    div {
+                        h1 {
+                            class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            "Summarize  📖",
+                        }
+                    }
+                    div {
+                        class: "mt-6",
+                        div {
+                            class: "flex items-center w-full",
+                            div {
+                                class: "flex items-center w-full",
+                                textarea {
+                                    class: "bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
+                                    placeholder: " Enter Text",
+                                    oninput: move |req| {
+                                        cx.spawn({
+                                            let output = output.clone();
+                                            let client = reqwest::Client::new();
+                                            async move {
+                                                let out = handle_summarization(req.value.clone(), &client).await;
+                                                match out {
+                                                    Ok(o) => output.set(o.text().await.unwrap()),
+                                                    Err(e) => output.set(e.to_string())
+                                                }
+                                            }
+                                        })
+                                    }
+                                },
+                                div {
+                                    class: "w-1/2 h-64 border-2 bg-black border-yellow-500 rounded-md mx-2",
+                                    h1 {
+                                        class: "text-2xl text-white",
+                                        "{output}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+    ))
+}
+
 pub fn Splash(cx: Scope) -> Element {
     cx.render(rsx!(
             div {
@@ -215,6 +278,9 @@ pub fn NLP_service(cx: Scope) -> Element {
                 Services::Splash => cx.render(rsx!(
                     Splash {}
                 )),
+                Services::Summarize => cx.render(rsx!(
+                    Summarization {}
+                )),
                 Services::Translate => {
                     cx.render(rsx!(
                         Translation {}
@@ -230,6 +296,16 @@ async fn handle_prediction(query: String, client: &reqwest::Client) -> Result<re
     let mut map = std::collections::HashMap::new();
     map.insert("query", query);
     client.post("http://127.0.0.1:8081/predict")
+            .header("Content-Type", "application/json")
+            .json(&map)
+            .send()
+            .await
+}
+
+async fn handle_summarization(query: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
+    let mut map = std::collections::HashMap::new();
+    map.insert("query", query);
+    client.post("http://127.0.0.1:8081/summarize")
             .header("Content-Type", "application/json")
             .json(&map)
             .send()
