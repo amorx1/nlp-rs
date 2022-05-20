@@ -1,4 +1,4 @@
-# dioxus-actix-mlops
+# nlp-rs
 ## Summary
 NLP inferencing SPA written in Rust, with pretrained transformers implemented in actix-web server. Frontend based on [Dioxus](https://dioxuslabs.com/) framework with TailwindCSS styling. Made for educational purposes with the aim to produce a web app leveraging pretrained BERT models for a range of NLP tasks (e.g. summarization, sentiment analysis etc.). The app is intended to yield high throughput in inferencing through concurrency. Current implementation relies on calls to REST API backend, introducing latency. Future implementation aims to support in-browser inferencing via WebAssembly.
 
