@@ -125,7 +125,7 @@ pub fn Translation(cx: Scope) -> Element {
                     div {
                         h1 {
                             class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
-                            "Translate  📖",
+                            "Translate   📖",
                         }
                     }
                     div {
@@ -211,7 +211,7 @@ pub fn Summarization(cx: Scope) -> Element {
                     div {
                         h1 {
                             class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
-                            "Summarize  📖",
+                            "Summarize  💡",
                         }
                     }
                     div {
