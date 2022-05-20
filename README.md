@@ -15,5 +15,7 @@ dioxus serve
 cd ./dioxus-actix-mlops/frontend
 cargo run
 ```
+Note that models will be downloaded on first run, therefore the app should be restarted before use.
+
 ## Example
 ![example](https://github.com/amorx1/dioxus-actix-mlops/blob/master/public/example.png?raw=true "Example")
