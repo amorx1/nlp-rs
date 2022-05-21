@@ -54,7 +54,7 @@ pub fn Nav(cx: Scope) -> Element {
                                 });
                             },
                             class: "inline-flex items-center bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 font-bold text-8xl",
-                            "NLP Ops"
+                            "nlp-rs"
                         }
                         ul {
                             class: "flex items-center hidden space-x-8 lg:flex",
@@ -124,7 +124,7 @@ pub fn Translation(cx: Scope) -> Element {
                     class: "p-6",
                     div {
                         h1 {
-                            class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
                             "Translate   📖",
                         }
                     }
@@ -210,7 +210,7 @@ pub fn Summarization(cx: Scope) -> Element {
                     class: "p-6",
                     div {
                         h1 {
-                            class: "block mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
                             "Summarize  💡",
                         }
                     }
