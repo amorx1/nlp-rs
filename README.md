@@ -8,11 +8,11 @@ Current functionality is limited to translation, with support for 4 languages: E
 The complete service can be run by executing the following commands in the frontend and backend directories:
 
 ```shell
-cd ./dioxus-actix-mlops/frontend
+cd ./nlp-rs/frontend
 dioxus serve
  ```
 ```shell
-cd ./dioxus-actix-mlops/frontend
+cd ./nlp-rs/backend
 cargo run
 ```
 Note that models will be downloaded on first run, therefore the app should be restarted before use.
