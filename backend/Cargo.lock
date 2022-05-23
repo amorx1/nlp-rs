@@ -609,6 +609,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "backend"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-rt 2.7.0",
+ "actix-web 4.0.1",
+ "actix-web-httpauth",
+ "chrono",
+ "derive_more",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "lingua",
+ "log",
+ "r2d2",
+ "rand 0.8.5",
+ "reqwest",
+ "rust-bert",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tch",
+ "tokio 1.18.2",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3222,32 +3248,6 @@ dependencies = [
  "tch",
  "thiserror",
  "uuid",
-]
-
-[[package]]
-name = "rust_actix_auth"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-rt 2.7.0",
- "actix-web 4.0.1",
- "actix-web-httpauth",
- "chrono",
- "derive_more",
- "dotenv",
- "env_logger",
- "futures",
- "lingua",
- "log",
- "r2d2",
- "rand 0.8.5",
- "reqwest",
- "rust-bert",
- "serde",
- "serde_derive",
- "serde_json",
- "tch",
- "tokio 1.18.2",
 ]
 
 [[package]]
