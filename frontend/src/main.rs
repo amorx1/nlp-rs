@@ -20,16 +20,6 @@ pub fn Head(cs: Scope) -> Element {
     ))
 }
 
-async fn send_service(service: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
-    let mut map = std::collections::HashMap::new();
-    map.insert("service", service);
-    client.post("http://127.0.0.1:8081/service")
-            .header("Content-Type", "application/json")
-            .json(&map)
-            .send()
-            .await
-}
-
 pub fn Nav(cx: Scope) -> Element {
     let set_service = use_set(&cx, SERVICE);
     cx.render(rsx! (
@@ -140,9 +130,10 @@ pub fn Translation(cx: Scope) -> Element {
                                     oninput: move |req| {
                                         cx.spawn({
                                             let output = output.clone();
+                                            let target = target.clone();
                                             let client = reqwest::Client::new();
                                             async move {
-                                                let out = handle_prediction(req.value.clone(), &client).await;
+                                                let out = handle_prediction(&target, req.value.clone(), &client).await;
                                                 match out {
                                                     Ok(o) => output.set(o.text().await.unwrap()),
                                                     Err(e) => output.set(e.to_string())
@@ -281,20 +272,18 @@ pub fn NLP_service(cx: Scope) -> Element {
                 Services::Summarize => cx.render(rsx!(
                     Summarization {}
                 )),
-                Services::Translate => {
-                    cx.render(rsx!(
-                        Translation {}
-                    ))
-                }
-
+                Services::Translate => cx.render(rsx!(
+                    Translation {}
+                ))
             }
         }
     ))
 }
 
-async fn handle_prediction(query: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
+async fn handle_prediction(target: &String, query: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
     let mut map = std::collections::HashMap::new();
     map.insert("query", query);
+    map.insert("target", target.to_string());
     client.post("http://127.0.0.1:8081/predict")
             .header("Content-Type", "application/json")
             .json(&map)
@@ -312,6 +301,15 @@ async fn handle_summarization(query: String, client: &reqwest::Client) -> Result
             .await
 }
 
+async fn send_service(service: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
+    let mut map = std::collections::HashMap::new();
+    map.insert("service", service);
+    client.post("http://127.0.0.1:8081/service")
+            .header("Content-Type", "application/json")
+            .json(&map)
+            .send()
+            .await
+}
 
 fn app(cx: Scope) -> Element {
 

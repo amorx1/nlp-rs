@@ -15,10 +15,15 @@ use tch::Device;
 use tokio::task::spawn_blocking;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Query {
+pub struct TQuery {
     pub query: String,
+    target: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SQuery {
+    pub query: String,
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServiceType {
     pub service: String,
@@ -57,9 +62,10 @@ async fn convert_lang(lang: String) -> rust_bert::pipelines::translation::Langua
     }
 }
 
-async fn translate(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+async fn translate(q: web::Json<TQuery>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
     let data = data.lock().unwrap();
     let query = format!("{}", q.query);
+    let target = format!("{}", q.target);
 
     if query == "".to_string() {
         return HttpResponse::Ok().body("Enter phrase");
@@ -71,15 +77,16 @@ async fn translate(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -> Http
 
     let inferred_language = infer_input(&query).await;
     let source_language = convert_lang(inferred_language).await;
+    let target_language = convert_lang(target).await;
+
+    if source_language == target_language {
+        return HttpResponse::Ok().body(query);
+    }
 
     match &data.TModel {
         Some(translation_model) => {
             let output = translation_model
-                .translate(
-                    &[query],
-                    source_language,
-                    rust_bert::pipelines::translation::Language::French,
-                )
+                .translate(&[query], source_language, target_language)
                 .unwrap();
             let res = &output[0];
 
@@ -89,7 +96,7 @@ async fn translate(q: web::Json<Query>, data: web::Data<Mutex<AppData>>) -> Http
     }
 }
 
-async fn summarize(q:web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+async fn summarize(q: web::Json<SQuery>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
     let data = data.lock().unwrap();
     let query = format!("{}", q.query);
 
@@ -97,13 +104,13 @@ async fn summarize(q:web::Json<Query>, data: web::Data<Mutex<AppData>>) -> HttpR
         return HttpResponse::Ok().body("Enter text");
     }
 
-    match &data.SModel {    
+    match &data.SModel {
         Some(summarization_model) => {
             let output = summarization_model.summarize(&[query]);
             let res = &output[0];
             HttpResponse::Ok().body(res.to_string())
-        },
-        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string())
+        }
+        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string()),
     }
 }
 
@@ -181,32 +188,32 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
                     data.TModel = Some(
                         spawn_blocking(move || get_translation_model())
                             .await
-                            .unwrap()
+                            .unwrap(),
                     );
                 }
             }
             HttpResponse::Ok().body("Translation Model Created/Already Exists".to_string())
-        },
+        }
 
         "Summarization" => {
             // data.TModel = None;
             match &data.SModel {
-                Some(_) => {},
+                Some(_) => {}
                 None => {
-                    data.SModel =Some(
+                    data.SModel = Some(
                         spawn_blocking(move || get_summarization_model())
-                        .await
-                        .unwrap()
+                            .await
+                            .unwrap(),
                     );
                 }
             }
             HttpResponse::Ok().body("OK".to_string())
-        },
+        }
 
         "None" => {
             // data.TModel = None;
             HttpResponse::Ok().body("OK".to_string())
-        },
+        }
 
         _ => HttpResponse::Ok().body("NO MODEL CREATED".to_string()),
     }
@@ -215,7 +222,7 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    
+
     let data = web::Data::new(Mutex::new(AppData {
         TModel: None,
         SModel: None,
