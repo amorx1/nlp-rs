@@ -111,14 +111,16 @@ pub fn Translation(cx: Scope) -> Element {
     let set_loading = use_set(&cx, LOADING);
     cx.render(rsx!(
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
                 div {
                     class: "p-6",
                     div {
+                        class: "flex items-center w-full",
                         h1 {
                             class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
                             "Translate   📖",
-                        }
+                        },
+                        Loading {}
                     }
                     div {
                         class: "mt-6",
@@ -192,7 +194,7 @@ pub fn Translation(cx: Scope) -> Element {
                                     }
                                 },
                             }
-                        }
+                        },
                     }
                 }
             }
@@ -201,16 +203,19 @@ pub fn Translation(cx: Scope) -> Element {
 
 pub fn Summarization(cx: Scope) -> Element {
     let output = use_state(&cx, || "".to_string());
+    let set_loading = use_set(&cx, LOADING);
     cx.render(rsx!(
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
                 div {
                     class: "p-6",
                     div {
+                        class: "flex items-center w-full",
                         h1 {
                             class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
                             "Summarize  💡",
-                        }
+                        },
+                        Loading {}
                     }
                     div {
                         class: "mt-6",
@@ -222,14 +227,22 @@ pub fn Summarization(cx: Scope) -> Element {
                                     class: "bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
                                     placeholder: " Enter Text",
                                     oninput: move |req| {
+                                        set_loading(true);
                                         cx.spawn({
                                             let output = output.clone();
+                                            let sl = set_loading.clone();
                                             let client = reqwest::Client::new();
                                             async move {
                                                 let out = handle_summarization(req.value.clone(), &client).await;
                                                 match out {
-                                                    Ok(o) => output.set(o.text().await.unwrap()),
-                                                    Err(e) => output.set(e.to_string())
+                                                    Ok(o) => {
+                                                        sl(false);
+                                                        output.set(o.text().await.unwrap())
+                                                    },
+                                                    Err(e) => {
+                                                        sl(false);
+                                                        output.set(e.to_string())
+                                                    }
                                                 }
                                             }
                                         })
@@ -283,7 +296,7 @@ pub fn NLP_service(cx: Scope) -> Element {
                     Translation {}
                 ))
             }
-            Loading {}
+           // Loading {}
         }
     ))
 }
@@ -292,10 +305,12 @@ pub fn Loading(cx: Scope) -> Element {
     let is_loading = use_read(&cx, LOADING);
     if is_loading.clone() {
         cx.render(rsx!(
-            h1 {
-                class: "text-white text-4xl",
-                "LOADING"
-               }
+                span {
+                    class: "px-4 pt-1 h-4 w-4",
+                    span {
+                        class: "animate-ping absolute inline-flex w-4 h-4 rounded-full bg-yellow-500"
+                    }
+                }
         ))    
     }
     else {
