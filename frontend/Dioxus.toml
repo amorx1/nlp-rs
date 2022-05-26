@@ -1,0 +1,39 @@
+[application]
+
+# dioxus project name
+name = "frontend"
+
+# default platfrom
+# you can also use `dioxus serve/build --platform XXX` to use other platform
+# value: web | desktop
+default_platform = "web"
+
+# Web `build` & `serve` dist path
+out_dir = "dist"
+
+# resource (static) file folder
+asset_dir = "public"
+
+[web.app]
+
+# HTML title tag content
+title = "nlp-rs ⚙️"
+
+[web.watcher]
+
+watch_path = ["src"]
+
+# include `assets` in web platform
+[web.resource]
+
+# CSS style file
+style = []
+
+# Javascript code file
+script = ["https://cdn.tailwindcss.com"]
+
+[web.resource.dev]
+
+# Javascript code file
+# serve: [dev-server] only
+script = []

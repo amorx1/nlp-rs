@@ -13,20 +13,12 @@ fn main() {
     dioxus::web::launch(app);
 }
 
-pub fn Head(cs: Scope) -> Element {
-    cs.render(rsx!(
-        head {
-            link { rel: "stylesheet", href: "https://unpkg.com/tailwindcss@^2.0/dist/tailwind.css" }
-        }
-    ))
-}
-
 pub fn Nav(cx: Scope) -> Element {
     let set_service = use_set(&cx, SERVICE);
     cx.render(rsx! (
         nav {
             div {
-                class: "bg-black",
+                class: "bg-white dark:bg-black",
                 div {
                     class: "px-4 py-16 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8",
                     div {
@@ -63,7 +55,7 @@ pub fn Nav(cx: Scope) -> Element {
                                             }
                                         });
                                     },
-                                    class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
+                                    class: "font-medium text-xl tracking-wide text-gray-400 transition-colors duration-200 dark:text-white dark:hover:bg-gray-900 hover:bg-slate-600 hover:text-gray-200 rounded-lg px-2 py-2",
                                     "Translation"
                                 }
                             },
@@ -81,20 +73,20 @@ pub fn Nav(cx: Scope) -> Element {
                                             }
                                         })
                                     },
-                                    class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
+                                    class: "font-medium text-xl tracking-wide text-gray-400 transition-colors duration-200 dark:text-white dark:hover:bg-gray-900 hover:bg-slate-600 hover:text-gray-200 rounded-lg px-2 py-2",
                                     "Summarization"
                                 }
                             },
                             li {
                                 button {
-                                    class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
-                                    "Dialogue"
+                                    class: "font-medium text-xl tracking-wide text-gray-400 transition-colors duration-200 dark:text-white dark:hover:bg-gray-900 hover:bg-slate-600 hover:text-gray-200 rounded-lg px-2 py-2",
+                                    "Sentiment Analysis"
                                 }
                             },
                             li {
                                 button {
-                                    class: "font-medium text-xl tracking-wide text-gray-100 transition-colors duration-200 hover:bg-gray-900 rounded-lg px-2 py-2",
-                                    "Generation"
+                                    class: "font-medium text-xl tracking-wide text-gray-400 transition-colors duration-200 dark:text-white dark:hover:bg-gray-900 hover:bg-slate-600 hover:text-gray-200 rounded-lg px-2 py-2",
+                                    "Zero-Shot"
                                 }
                             }
                         }
@@ -111,13 +103,13 @@ pub fn Translation(cx: Scope) -> Element {
     let set_loading = use_set(&cx, LOADING);
     cx.render(rsx!(
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-slate-200 rounded-lg shadow-md dark:bg-gray-900",
                 div {
                     class: "p-6",
                     div {
                         class: "flex items-center w-full",
                         h1 {
-                            class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            class: "block mx-2 mt-2 text-4xl font-semibold text-slate-400 dark:text-white transition-colors duration-200 transform dark:text-white",
                             "Translate   📖",
                         },
                         Loading {}
@@ -129,7 +121,7 @@ pub fn Translation(cx: Scope) -> Element {
                             div {
                                 class: "flex items-center w-full",
                                 textarea {
-                                    class: "bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
+                                    class: "bg-white dark:bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-slate-400 dark:text-white text-2xl mx-2",
                                     placeholder: " Enter Query",
                                     oninput: move |req| {
                                         set_loading(true);
@@ -152,9 +144,9 @@ pub fn Translation(cx: Scope) -> Element {
                                     }
                                 },
                                 div {
-                                    class: "w-1/2 h-64 border-2 bg-black border-yellow-500 rounded-md mx-2",
+                                    class: "w-1/2 h-64 border-2 bg-white dark:bg-black border-yellow-500 rounded-md mx-2",
                                     h1 {
-                                        class: "text-2xl text-white",
+                                        class: "text-2xl text-slate-400 dark:text-white",
                                         "{output}"
                                     }
                                 }
@@ -168,11 +160,10 @@ pub fn Translation(cx: Scope) -> Element {
                             div {
                                 class: "flex items-center w-full",
                                 label { 
-                                    class: "text-white font-bold text-xl mx-2",
+                                    class: "text-slate-400 dark:text-white font-bold text-xl mx-2",
                                     "Select target language: " }
                                 select {
-                                    // class: "mx-2 rounded-lg w-full h-8 py-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white text-xl font-bold",
-                                    class: "mx-2 rounded-lg w-full h-12 py-2 bg-black border-2 border-yellow-500 text-white text-xl font-bold",
+                                    class: "mx-2 rounded-lg w-full h-12 py-2 bg-slate-200 dark:bg-black border-2 border-yellow-500 text-slate-400 dark:text-white text-xl font-bold",
                                     onchange: move |t| target.set(t.value.to_string()),
                                     name: "Target",
                                     id: "target-selection",
@@ -206,13 +197,13 @@ pub fn Summarization(cx: Scope) -> Element {
     let set_loading = use_set(&cx, LOADING);
     cx.render(rsx!(
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-slate-200 rounded-lg shadow-md dark:bg-gray-900",
                 div {
                     class: "p-6",
                     div {
                         class: "flex items-center w-full",
                         h1 {
-                            class: "block mx-2 mt-2 text-4xl font-semibold text-white transition-colors duration-200 transform dark:text-white",
+                            class: "block mx-2 mt-2 text-4xl font-semibold text-slate-400 dark:text-white transition-colors duration-200 transform dark:text-white",
                             "Summarize  💡",
                         },
                         Loading {}
@@ -224,7 +215,7 @@ pub fn Summarization(cx: Scope) -> Element {
                             div {
                                 class: "flex items-center w-full",
                                 textarea {
-                                    class: "bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-white text-2xl mx-2",
+                                    class: "bg-white dark:bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-slate-400 dark:text-white text-2xl mx-2",
                                     placeholder: " Enter Text",
                                     oninput: move |req| {
                                         set_loading(true);
@@ -249,9 +240,9 @@ pub fn Summarization(cx: Scope) -> Element {
                                     }
                                 },
                                 div {
-                                    class: "w-1/2 h-64 border-2 bg-black border-yellow-500 rounded-md mx-2",
+                                    class: "w-1/2 h-64 border-2 bg-white dark:bg-black border-yellow-500 rounded-md mx-2",
                                     h1 {
-                                        class: "text-2xl text-white",
+                                        class: "text-2xl text-slate-400 dark:text-white",
                                         "{output}"
                                     }
                                 }
@@ -266,7 +257,7 @@ pub fn Summarization(cx: Scope) -> Element {
 pub fn Splash(cx: Scope) -> Element {
     cx.render(rsx!(
             div {
-                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-gray-900 rounded-lg shadow-md dark:bg-gray-800",
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-1/2 overflow-hidden bg-slate-200 rounded-lg shadow-md dark:bg-gray-900",
                 div {
                     class: "p-6",
                     div {
@@ -284,7 +275,7 @@ pub fn NLP_service(cx: Scope) -> Element {
     let curr_service = use_read(&cx, SERVICE);
     cx.render(rsx!(
         div {
-            class: "bg-black h-1/2",
+            class: "bg-white dark:bg-black h-1/2",
             match curr_service {
                 Services::Splash => cx.render(rsx!(
                     Splash {}
@@ -308,7 +299,7 @@ pub fn Loading(cx: Scope) -> Element {
                 span {
                     class: "px-4 pt-1 h-4 w-4",
                     span {
-                        class: "animate-ping absolute inline-flex w-4 h-4 rounded-full bg-yellow-500"
+                        class: "animate-ping absolute inline-flex w-4 h-4 rounded-full bg-amber-600 dark:bg-amber-300"
                     }
                 }
         ))    
@@ -354,12 +345,10 @@ async fn send_service(service: String, client: &reqwest::Client) -> Result<reqwe
 fn app(cx: Scope) -> Element {
 
     cx.render(rsx! (
-        Head {}
         Nav {}
         body {
-            class: "bg-black h-full pt-18",
+            class: "bg-white dark:bg-black h-full pt-18",
             NLP_service {},
-//            Loading {}
         }   
     ))
 }
