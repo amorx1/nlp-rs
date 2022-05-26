@@ -4,12 +4,13 @@ use lingua::Language::{English, French, German, Spanish};
 use lingua::{Language, LanguageDetector, LanguageDetectorBuilder};
 use rust_bert::pipelines::common::ModelType;
 use rust_bert::pipelines::summarization::SummarizationModel;
+use rust_bert::pipelines::sentiment::{ SentimentModel, Sentiment };
 use rust_bert::pipelines::translation::{
     TranslationConfig, TranslationModel, TranslationModelBuilder,
 };
 use rust_bert::resources::{RemoteResource, Resource};
 use rust_bert::t5::{T5ConfigResources, T5ModelResources, T5VocabResources};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::sync::{Arc, Mutex};
 use tch::Device;
 use tokio::task::spawn_blocking;
@@ -25,6 +26,11 @@ pub struct SQuery {
     pub query: String,
 }
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SeQuery {
+    pub query: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ServiceType {
     pub service: String,
 }
@@ -32,6 +38,7 @@ pub struct ServiceType {
 pub struct AppData {
     TModel: Option<TranslationModel>,
     SModel: Option<SummarizationModel>,
+    SeModel: Option<SentimentModel>
 }
 
 pub async fn index() -> impl Responder {
@@ -92,7 +99,7 @@ async fn translate(q: web::Json<TQuery>, data: web::Data<Mutex<AppData>>) -> Htt
 
             HttpResponse::Ok().body(res.to_string())
         }
-        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string()),
+        None => HttpResponse::Ok().body("CANNOT ACCESS TRANSLATIONAL MODEL".to_string()),
     }
 }
 
@@ -110,7 +117,25 @@ async fn summarize(q: web::Json<SQuery>, data: web::Data<Mutex<AppData>>) -> Htt
             let res = &output[0];
             HttpResponse::Ok().body(res.to_string())
         }
-        None => HttpResponse::Ok().body("CANNOT ACCESS MODEL".to_string()),
+        None => HttpResponse::Ok().body("CANNOT ACCESS SUMMARIZATION MODEL".to_string())
+    }
+}
+
+async fn sentiment(q: web::Json<SeQuery>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
+    let data = data.lock().unwrap();
+    let query = format!("{}", q.query);
+    
+    if query == "".to_string() {
+        return HttpResponse::Ok().body("Enter text");
+    }
+    
+    match &data.SeModel {
+        Some(sentiment_model) => {
+            let output = sentiment_model.predict([query.as_ref()]);
+            let res = &output[0];
+            HttpResponse::Ok().body(serde_json::to_string(res).unwrap())
+        }
+        None => HttpResponse::Ok().body("CANNOT ACCESS SENTIMENT MODEL".to_string())
     }
 }
 
@@ -148,32 +173,14 @@ pub fn get_translation_model() -> TranslationModel {
         Device::cuda_if_available(),
     );
     TranslationModel::new(translation_config).unwrap()
-
-    // TranslationModelBuilder::new()
-    //     .with_model_type(ModelType::M2M100)
-    //     .with_source_languages(vec![
-    //         rust_bert::pipelines::translation::Language::English,
-    //         rust_bert::pipelines::translation::Language::Spanish,
-    //         rust_bert::pipelines::translation::Language::French,
-    //         rust_bert::pipelines::translation::Language::German,
-    //     ])
-    //     .with_target_languages(vec![
-    //         rust_bert::pipelines::translation::Language::Spanish,
-    //         rust_bert::pipelines::translation::Language::French,
-    //         rust_bert::pipelines::translation::Language::German,
-    //     ])
-    //     .create_model()
-    //     .unwrap()
-
-    // TranslationModelBuilder::new()
-    // .with_medium_model()
-    // .with_source_languages(vec![rust_bert::pipelines::translation::Language::English, rust_bert::pipelines::translation::Language::Spanish, rust_bert::pipelines::translation::Language::French, rust_bert::pipelines::translation::Language::German])
-    // .with_target_languages(vec![rust_bert::pipelines::translation::Language::English, rust_bert::pipelines::translation::Language::Spanish, rust_bert::pipelines::translation::Language::French, rust_bert::pipelines::translation::Language::German])
-    // .create_model().unwrap()
 }
 
 pub fn get_summarization_model() -> SummarizationModel {
     SummarizationModel::new(Default::default()).unwrap()
+}
+
+pub fn get_sentiment_model() -> SentimentModel {
+    SentimentModel::new(Default::default()).unwrap()
 }
 
 async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>>) -> HttpResponse {
@@ -210,6 +217,20 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
             HttpResponse::Ok().body("OK".to_string())
         }
 
+        "Sentiment" => {
+            match &data.SeModel {
+                Some(_) => {},
+                None => {
+                    data.SeModel = Some(
+                        spawn_blocking(move || get_sentiment_model())
+                            .await
+                            .unwrap(),
+                        );
+                }
+            }
+            HttpResponse::Ok().body("OK".to_string())
+        }
+
         "None" => {
             // data.TModel = None;
             HttpResponse::Ok().body("OK".to_string())
@@ -226,6 +247,7 @@ async fn main() -> std::io::Result<()> {
     let data = web::Data::new(Mutex::new(AppData {
         TModel: None,
         SModel: None,
+        SeModel: None
     }));
 
     HttpServer::new(move || {
@@ -236,6 +258,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/service").route(web::post().to(model_service)))
             .service(web::resource("/predict").route(web::post().to(translate)))
             .service(web::resource("/summarize").route(web::post().to(summarize)))
+            .service(web::resource("/sentiment").route(web::post().to(sentiment)))
     })
     .bind("127.0.0.1:8081")?
     .run()
