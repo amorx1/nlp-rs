@@ -1,9 +1,18 @@
 use dioxus::prelude::*;
+use serde::{ Serialize, Deserialize };
+use serde_derive::{ Serialize, Deserialize };
 
 enum Services{
     Splash,
     Translate,
-    Summarize
+    Summarize,
+    Sentiment
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SentimentResult {
+    polarity: String,
+    score: f64
 }
 
 static SERVICE: Atom<Services> = |_| Services::Splash;
@@ -79,6 +88,18 @@ pub fn Nav(cx: Scope) -> Element {
                             },
                             li {
                                 button {
+                                    onclick: move |_| {
+                                        set_service(Services::Sentiment);
+                                        cx.spawn({
+                                            async move {
+                                                let client = reqwest::Client::new();
+                                                let res = send_service("Sentiment".to_string(), &client).await;
+                                                match res {
+                                                    _ => {}
+                                                }
+                                            }
+                                        })
+                                    },
                                     class: "font-medium text-xl tracking-wide text-gray-400 transition-colors duration-200 dark:text-white dark:hover:bg-gray-900 hover:bg-slate-600 hover:text-gray-200 rounded-lg px-2 py-2",
                                     "Sentiment Analysis"
                                 }
@@ -254,6 +275,71 @@ pub fn Summarization(cx: Scope) -> Element {
     ))
 }
 
+pub fn Sentiment(cx: Scope) -> Element {
+    let output = use_state(&cx, || SentimentResult{polarity: String::from("Negative"), score:0.0});
+    let set_loading = use_set(&cx, LOADING);
+    cx.render(rsx!(
+            div {
+                class: "mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 h-full overflow-hidden bg-slate-200 rounded-lg shadow-md dark:bg-gray-900",
+                div {
+                    class: "p-6",
+                    div {
+                        class: "flex items-center w-full",
+                        h1 {
+                            class: "block mx-2 mt-2 text-4xl font-semibold text-slate-400 dark:text-white transition-colors duration-200 transform dark:text-white",
+                            "Sentiment Analysis  🤔",
+                        },
+                        Loading {}
+                    }
+                    div {
+                        class: "mt-6",
+                        div {
+                            class: "flex items-center w-full",
+                            div {
+                                class: "flex items-center w-full",
+                                textarea {
+                                    class: "bg-white dark:bg-black border-2 border-yellow-500 rounded-md w-1/2 h-64 text-slate-400 dark:text-white text-2xl mx-2",
+                                    placeholder: " Enter Text",
+                                    oninput: move |req| {
+                                        set_loading(true);
+                                        cx.spawn({
+                                            let output = output.clone();
+                                            let sl = set_loading.clone();
+                                            let client = reqwest::Client::new();
+                                            async move {
+                                                let out = handle_sentiment(req.value.clone(), &client).await;
+                                                match out {
+                                                    Ok(o) => {
+                                                        sl(false);
+                                                        let result = o.text().await.unwrap();
+                                                        let sentiment: SentimentResult = serde_json::from_str(&result).unwrap();
+                                                        output.set(sentiment)
+                                                    },
+                                                    Err(e) => {
+                                                        sl(false);
+                                                        // output.set(e.to_string())
+                                                    }
+                                                }
+                                            }
+                                        })
+                                    }
+                                },
+                                div {
+                                    class: "w-1/2 h-64 border-2 bg-white dark:bg-black border-yellow-500 rounded-md mx-2",
+                                    h1 {
+                                        class: "text-2xl text-slate-400 dark:text-white",
+                                        "{output.polarity}"
+                                    }
+                                }
+                           }
+                        }
+                        // show senti result jere
+                    }
+                }
+            }
+    ))
+}
+
 pub fn Splash(cx: Scope) -> Element {
     cx.render(rsx!(
             div {
@@ -280,11 +366,14 @@ pub fn NLP_service(cx: Scope) -> Element {
                 Services::Splash => cx.render(rsx!(
                     Splash {}
                 )),
+                Services::Translate => cx.render(rsx!(
+                    Translation {}
+                )),
                 Services::Summarize => cx.render(rsx!(
                     Summarization {}
                 )),
-                Services::Translate => cx.render(rsx!(
-                    Translation {}
+                Services::Sentiment => cx.render(rsx!(
+                    Sentiment {}
                 ))
             }
            // Loading {}
@@ -330,6 +419,16 @@ async fn handle_summarization(query: String, client: &reqwest::Client) -> Result
             .json(&map)
             .send()
             .await
+}
+
+async fn handle_sentiment(query: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {
+    let mut map = std::collections::HashMap::new();
+    map.insert("query", query);
+    client.post("http://127.0.0.1:8081/sentiment")
+    .header("Content-Type", "application/json")
+    .json(&map)
+    .send()
+    .await
 }
 
 async fn send_service(service: String, client: &reqwest::Client) -> Result<reqwest::Response, reqwest::Error> {

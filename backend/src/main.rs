@@ -188,7 +188,6 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
     let service = format!("{}", t.service);
     match service.as_str() {
         "Translation" => {
-            // data.SModel = None;
             match &data.TModel {
                 Some(_) => {}
                 None => {
@@ -203,7 +202,6 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
         }
 
         "Summarization" => {
-            // data.TModel = None;
             match &data.SModel {
                 Some(_) => {}
                 None => {
@@ -232,7 +230,6 @@ async fn model_service(t: web::Json<ServiceType>, data: web::Data<Mutex<AppData>
         }
 
         "None" => {
-            // data.TModel = None;
             HttpResponse::Ok().body("OK".to_string())
         }
 
